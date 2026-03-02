@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { createUser, getUsers } from "../controllers/user.controller";
+import { getUsers } from "../controllers/user.controller";
+import { protect } from "../middleware/auth.middleware";
 
 const router = Router();
 
-router.post("/", createUser);
-router.get("/", getUsers);
+router.get("/", protect, getUsers);
 
 export default router;
