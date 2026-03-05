@@ -4,6 +4,7 @@ export interface IDocumentChunk extends MongoDocument {
   documentId: mongoose.Types.ObjectId;
   chunkText: string;
   chunkIndex: number;
+  embedding?: number[];
 }
 
 const documentChunkSchema = new mongoose.Schema<IDocumentChunk>(
@@ -12,6 +13,7 @@ const documentChunkSchema = new mongoose.Schema<IDocumentChunk>(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Document",
       required: true,
+      index: true,
     },
 
     chunkText: {
@@ -23,6 +25,11 @@ const documentChunkSchema = new mongoose.Schema<IDocumentChunk>(
       type: Number,
       required: true,
     },
+
+     embedding: {
+      type: [Number],   // vector embedding
+      default: null
+    }
   },
   {
     timestamps: true,
