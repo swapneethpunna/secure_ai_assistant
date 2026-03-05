@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import Document from "../models/document.model";
 import fs from "fs";
 import path from "path";
+import DocumentChunk from "../models/DocumentChunk";
+import { splitTextIntoChunks } from "../utils/textChunker";
 
 // Validates actual PDF magic bytes ("%PDF") — prevents MIME spoofing (OWASP A03)
 const isValidPDF = (filePath: string): boolean => {
@@ -19,46 +21,81 @@ const isValidPDF = (filePath: string): boolean => {
 // Sanitize user-provided filename for safe storage as document title
 const sanitizeFilename = (name: string): string => {
   return path
-    .basename(name)                    // strip any directory traversal
-    .replace(/[^\w.\-\s]/g, "")       // only allow safe characters
+    .basename(name)
+    .replace(/[^\w.\-\s]/g, "")
     .trim()
-    .slice(0, 200);                    // cap length
+    .slice(0, 200);
+};
+
+// Extract text from PDF using pdf2json
+const extractTextFromPDF = (buffer: Buffer): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const PDFParser = require("pdf2json");
+    const parser = new PDFParser();
+
+    parser.on("pdfParser_dataError", (err: any) => reject(err.parserError));
+
+    parser.on("pdfParser_dataReady", (pdfData: any) => {
+      try {
+        const text = pdfData.Pages.map((page: any) =>
+          page.Texts.map((t: any) =>
+            decodeURIComponent(t.R.map((r: any) => r.T).join(""))
+          ).join(" ")
+        ).join("\n");
+        resolve(text);
+      } catch (e) {
+        reject(e);
+      }
+    });
+
+    parser.parseBuffer(buffer);
+  });
 };
 
 export const uploadDocument = async (req: Request, res: Response) => {
   try {
-    // GOOD: File presence check
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    // Guard against missing user context (protect middleware failure)
     const userId = (req as any).userId;
     if (!userId) {
-      // Clean up the orphaned file before returning
-      fs.unlink(req.file.path, () => { });
+      fs.unlink(req.file.path, () => {});
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    //  Magic byte validation — second layer defense against MIME spoofing
     if (!isValidPDF(req.file.path)) {
-      fs.unlink(req.file.path, () => { }); // Delete the invalid file immediately
+      fs.unlink(req.file.path, () => {});
       return res.status(400).json({ message: "Invalid file format" });
     }
 
-    // Sanitize the original filename before storing it
     const safeTitle = sanitizeFilename(req.file.originalname) || "Untitled";
 
     const document = await Document.create({
       title: safeTitle,
       fileName: req.file.filename,
       filePath: req.file.path,
-      fileSize: req.file.size,        // multer provides this automatically
-      mimeType: req.file.mimetype,    // already validated at this point
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
       uploadedBy: userId,
     });
 
-    // Never return filePath in the response — leaks server internals (OWASP A02)
+    const pdfBuffer = fs.readFileSync(req.file.path);
+    const extractedText = await extractTextFromPDF(pdfBuffer);
+
+    if (!extractedText || extractedText.trim().length < 20) {
+      return res.status(400).json({ message: "PDF contains no readable text" });
+    }
+
+    const chunks = splitTextIntoChunks(extractedText, 500);
+    const chunkDocuments = chunks.map((chunk, index) => ({
+      documentId: document._id,
+      chunkText: chunk,
+      chunkIndex: index,
+    }));
+
+    await DocumentChunk.insertMany(chunkDocuments);
+
     res.status(201).json({
       success: true,
       document: {
@@ -69,11 +106,9 @@ export const uploadDocument = async (req: Request, res: Response) => {
         createdAt: document.createdAt,
       },
     });
-  } catch (error) {
-    // Generic error message — no stack trace leak
-    // Clean up uploaded file if DB save fails
+  } catch (error: any) {
     if (req.file?.path) {
-      fs.unlink(req.file.path, () => { });
+      fs.unlink(req.file.path, () => {});
     }
     res.status(500).json({ message: "Failed to upload document" });
   }
