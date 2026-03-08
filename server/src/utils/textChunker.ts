@@ -6,11 +6,9 @@ export const splitTextIntoChunks = (
   const chunks: string[] = [];
 
   // Clean up excessive whitespace and newlines
-  const cleanedText = text
-    .replace(/\s+/g, " ")
-    .trim();
-
+  const cleanedText = text.replace(/\s+/g, " ").trim();
   const words = cleanedText.split(" ");
+
   let currentChunk: string[] = [];
   let currentLength = 0;
 
@@ -21,14 +19,13 @@ export const splitTextIntoChunks = (
 
     if (currentLength >= chunkSize) {
       chunks.push(currentChunk.join(" ").trim());
-
-      // Overlap: keep last `overlap` characters worth of words for context
       const overlapWords: string[] = [];
       let overlapLength = 0;
+
       for (let j = currentChunk.length - 1; j >= 0; j--) {
+        overlapWords.unshift(currentChunk[j]); // include the word first
         overlapLength += currentChunk[j].length + 1;
-        if (overlapLength >= overlap) break;
-        overlapWords.unshift(currentChunk[j]);
+        if (overlapLength >= overlap) break;   // then decide to stop
       }
 
       currentChunk = overlapWords;
@@ -36,10 +33,10 @@ export const splitTextIntoChunks = (
     }
   }
 
-  // Push remaining words as last chunk
+  // Push remaining words as the last chunk
   if (currentChunk.length > 0) {
     chunks.push(currentChunk.join(" ").trim());
   }
 
-  return chunks.filter(chunk => chunk.length > 0);
+  return chunks.filter((chunk) => chunk.length > 0);
 };

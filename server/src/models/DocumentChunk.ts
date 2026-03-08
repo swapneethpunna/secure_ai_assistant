@@ -15,28 +15,23 @@ const documentChunkSchema = new mongoose.Schema<IDocumentChunk>(
       required: true,
       index: true,
     },
-
     chunkText: {
       type: String,
       required: true,
     },
-
     chunkIndex: {
       type: Number,
       required: true,
     },
 
-     embedding: {
-      type: [Number],   // vector embedding
-      default: null
-    }
+    embedding: {
+      type: [Number],
+      default: null,
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-export default mongoose.model<IDocumentChunk>(
-  "DocumentChunk",
-  documentChunkSchema
-);
+documentChunkSchema.index({ documentId: 1, chunkIndex: 1 });
+
+export default mongoose.model<IDocumentChunk>("DocumentChunk", documentChunkSchema);

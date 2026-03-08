@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import DocumentChunk from "../models/DocumentChunk";
 import { splitTextIntoChunks } from "../utils/textChunker";
+import { generateEmbeddings } from "../services/embedding.service";
 
 // Validates actual PDF magic bytes ("%PDF") — prevents MIME spoofing (OWASP A03)
 const isValidPDF = (filePath: string): boolean => {
@@ -52,7 +53,13 @@ const extractTextFromPDF = (buffer: Buffer): Promise<string> => {
   });
 };
 
+const cleanupFile = (filePath?: string) => {
+  if (filePath) fs.unlink(filePath, () => {});
+};
+
 export const uploadDocument = async (req: Request, res: Response) => {
+  let documentId: string | null = null;
+
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
@@ -60,12 +67,12 @@ export const uploadDocument = async (req: Request, res: Response) => {
 
     const userId = (req as any).userId;
     if (!userId) {
-      fs.unlink(req.file.path, () => {});
+      cleanupFile(req.file.path);
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     if (!isValidPDF(req.file.path)) {
-      fs.unlink(req.file.path, () => {});
+      cleanupFile(req.file.path);
       return res.status(400).json({ message: "Invalid file format" });
     }
 
@@ -79,24 +86,30 @@ export const uploadDocument = async (req: Request, res: Response) => {
       mimeType: req.file.mimetype,
       uploadedBy: userId,
     });
+    documentId = String(document._id);
 
     const pdfBuffer = fs.readFileSync(req.file.path);
     const extractedText = await extractTextFromPDF(pdfBuffer);
 
     if (!extractedText || extractedText.trim().length < 20) {
+      await Document.findByIdAndDelete(documentId);
+      cleanupFile(req.file.path);
       return res.status(400).json({ message: "PDF contains no readable text" });
     }
 
-    const chunks = splitTextIntoChunks(extractedText, 500);
-    const chunkDocuments = chunks.map((chunk, index) => ({
+    const chunks = splitTextIntoChunks(extractedText, 500, 50);
+    const chunkTexts = chunks.map((chunk) => chunk);
+    const embeddings: number[][] = await generateEmbeddings(chunks);
+
+    const chunkDocuments = chunks.map((chunk: string, index: number) => ({
       documentId: document._id,
       chunkText: chunk,
       chunkIndex: index,
+      embedding: embeddings[index],
     }));
 
     await DocumentChunk.insertMany(chunkDocuments);
-
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       document: {
         id: document._id,
@@ -104,12 +117,16 @@ export const uploadDocument = async (req: Request, res: Response) => {
         fileName: document.fileName,
         uploadedBy: document.uploadedBy,
         createdAt: document.createdAt,
+        totalChunks: chunkDocuments.length,
       },
     });
   } catch (error: any) {
-    if (req.file?.path) {
-      fs.unlink(req.file.path, () => {});
+    if (documentId) {
+      await Document.findByIdAndDelete(documentId).catch(() => {});
+      await DocumentChunk.deleteMany({ documentId }).catch(() => {});
     }
-    res.status(500).json({ message: "Failed to upload document" });
+    cleanupFile(req.file?.path);
+    console.error("uploadDocument error:", error);
+    return res.status(500).json({ message: "Failed to upload document" });
   }
 };
