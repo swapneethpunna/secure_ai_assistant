@@ -1,8 +1,8 @@
-import { Router } from "express";
+import express from "express";
 import { getUsers } from "../controllers/user.controller";
 import { protect } from "../middleware/auth.middleware";
 
-const router = Router();
+const router = express.Router();
 
 router.get("/", protect, getUsers);
 

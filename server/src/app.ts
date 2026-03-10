@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import documentRoutes from "./routes/documentRoutes";
 
+
 dotenv.config();
 const app = express();
 
@@ -37,6 +38,7 @@ const generalLimiter = rateLimit({
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/documents", generalLimiter, documentRoutes);
+app.use("/api/ai", generalLimiter, documentRoutes);
 
 app.get("/", (req, res) => {
   res.send("Secure AI Assistant API is running successfully!");

@@ -31,7 +31,7 @@ export interface RAGResult {
 export const retrieveRelevantChunks = async (
   queryEmbedding: number[],
   documentIds: string[],
-  topK: number = 5
+  topK: number = 3
 ): Promise<RetrievedChunk[]> => {
 
   const filter = documentIds.length > 0
@@ -84,7 +84,7 @@ ANSWER:`;
 export const queryRAGPipeline = async (
   query: string,
   documentIds: string[] = [],
-  topK: number = 5
+  topK: number = 3
 ): Promise<RAGResult> => {
 
   if (!query || query.trim().length === 0) {
@@ -112,7 +112,7 @@ export const queryRAGPipeline = async (
     model: "llama-3.3-70b-versatile",
     messages: [{ role: "user", content: prompt }],
     temperature: 0,      // deterministic — important for factual RAG answers
-    max_tokens: 1024,
+    max_tokens: 2000,
   });
 
   const answer = completion.choices[0]?.message?.content?.trim()
