@@ -15,8 +15,13 @@ app.use(express.json());
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json({ limit: "10kb" })); // limiting the request body size to 10kb
+const cors = require('cors');
 
-
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 // Rate limiting on auth routes to prevent brute force attacks
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
