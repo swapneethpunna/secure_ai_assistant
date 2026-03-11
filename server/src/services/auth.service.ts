@@ -49,6 +49,10 @@ export const registerUser = async (data: {
   // Use strong hashing with cost factor 12
   const hashedPassword = await bcrypt.hash(data.password, 12);
 
+  if(data.name.length < 3){
+    throw new Error("Name must be atleast 3 characters");
+  }
+
 
   const user = await User.create({
     name: validator.escape(data.name.trim()), // sanitize name
