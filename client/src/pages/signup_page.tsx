@@ -27,6 +27,11 @@ const SignUpCard = () => {
       return;
     }
 
+    if(name.length < 3){
+      setError("Name must be atleast 3 characters");
+      return;
+    }
+
     if (!/\S+@\S+\.\S+/.test(email)) {
       setError("Invalid email format");
       return;
@@ -60,6 +65,8 @@ const SignUpCard = () => {
           }
         }
       );
+      console.log("Response Data:", response.data);
+
 
       const token = response.data.token;
 
@@ -68,13 +75,23 @@ const SignUpCard = () => {
       navigate("/home");
 
     } catch (err) {
-      const error = err as AxiosError<{ message: string }>;
-      if (error.response) {
-        setError(error.response.data.message || "Signup failed");
-      } else {
-        setError("Server not responding");
-      }
-    }
+      const axiosError = err as AxiosError<{ message: string }>;
+
+
+  if (axiosError.response) {
+    const backendMessage =
+      (axiosError.response?.data as any)?.message ||
+      (axiosError.response?.data as any)?.error ||
+      (axiosError.response?.data as any)?.msg ||
+      "Signup failed";
+
+    setError(backendMessage);
+
+    // console.log("Backend Error:", axiosError.response?.data);
+  } else {
+    setError("Server not responding");
+  }
+}
   };
   return (
     <div className="login-wrapper">

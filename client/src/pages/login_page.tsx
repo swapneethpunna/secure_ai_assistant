@@ -18,7 +18,7 @@ const LoginCard = () => {
         ];
         return patterns.some((pattern) => pattern.test(input));
     };
-    
+
     const handleCreateAccount = () => {
         navigate("/register");
     };
@@ -26,6 +26,10 @@ const LoginCard = () => {
         e.preventDefault();
         if (!email || !password) {
             setError("Please fill in all fields");
+            return;
+        }
+        if (!/\S+@\S+\.\S+/.test(email)) {
+            setError("Invalid email format");
             return;
         }
         if (containsMaliciousInput(email) || containsMaliciousInput(password)) {
@@ -51,9 +55,17 @@ const LoginCard = () => {
             // Navigate to home
             navigate("/home");
         } catch (err) {
-            const error = err as AxiosError<{ message: string }>;
-            if (error.response) {
-                setError(error.response.data.message || "Login failed");
+            const axiosError = err as AxiosError<{ message: string }>;
+            if (axiosError.response) {
+                const backendMessage =
+                    (axiosError.response?.data as any)?.message ||
+                    (axiosError.response?.data as any)?.error ||
+                    (axiosError.response?.data as any)?.msg ||
+                    "Signup failed";
+
+                setError(backendMessage);
+
+                // console.log("Backend Error:", axiosError.response?.data);
             } else {
                 setError("Server not responding");
             }
