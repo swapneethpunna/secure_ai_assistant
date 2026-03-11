@@ -161,7 +161,7 @@ const SignUpCard = () => {
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              <input type={showPassword ? 'text' : 'password'} placeholder="Min .6 characters" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <input type={!showPassword ? 'text' : 'password'} placeholder="Min .6 characters" value={password} onChange={(e) => setPassword(e.target.value)} />
               <button className="toggle-password" onClick={() => setShowPassword(!showPassword)}>
                 {showPassword ? (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

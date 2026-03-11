@@ -127,7 +127,7 @@ const LoginCard = () => {
                                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                             </svg>
                             <input
-                                type={showPassword ? "text" : "password"}
+                                type={!showPassword ? "text" : "password"}
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
