@@ -2,8 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import SignUpCard from "../pages/signup_page";
 import LoginCard from "../pages/login_page";
 import PrivateRoute from "./ProtectedRoutes";
-import Home from "../pages/Home";
 import PublicRoute from "./PublicRoutes";
+import DashboardLayout from "../pages/dashboard";
 
 
 export default function AppRoutes() {
@@ -18,7 +18,7 @@ export default function AppRoutes() {
 
                 {/* Private Routes — logged-out users get redirected to / */}
                 <Route element={<PrivateRoute />}>
-                    <Route path="/home" element={<Home />} />
+                    <Route path="/home" element={<DashboardLayout />} />
                 </Route>
             </Routes>
         </BrowserRouter>
